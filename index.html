@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+      }
+
+      tbody tr[data-status="Approved"] {
+        background-color: #d4edda;
+      }
+
+      tbody tr[data-status="Rejected"] {
+        background-color: #f8d7da;
+      }
+
+      tbody tr[data-status="Pending"] {
+        background-color: #fff3cd;
+      }
+
+      @media (max-width: 767px) {
+        table,
+        thead,
+        tbody,
+        th,
+        td,
+        tr {
+          display: block;
+        }
+
+        thead tr {
+          position: absolute;
+          top: -9999px;
+          left: -9999px;
+        }
+
+        td {
+          position: relative;
+          padding-left: 50%;
+        }
+
+        td:before {
+          position: absolute;
+          top: 6px;
+          left: 6px;
+          width: 45%;
+          white-space: nowrap;
+          font-weight: bold;
+        }
+
+        td:nth-of-type(1):before {
+          content: "Language";
+        }
+        td:nth-of-type(2):before {
+          content: "Locale";
+        }
+        td:nth-of-type(3):before {
+          content: "LessonUuid";
+        }
+        td:nth-of-type(4):before {
+          content: "ItemId";
+        }
+        td:nth-of-type(5):before {
+          content: "Contents";
+        }
+        td:nth-of-type(6):before {
+          content: "Status";
+        }
+      }
+
+      th,
+      .status-select {
+        min-width: 150px;
+      }
+
+      #importSection {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      #exportSection {
+        position: fixed;
+        right: 10px;
+        bottom: 10px;
+      }
+
+      #warningText {
+        display: block;
+        max-width: 400px;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <title>Review Items</title>
+  </head>
+  <body>
+    <div id="importSection">
+      <h1>Explainer Review Tool</h1>
+      <p>Start by importing the JSON file</p>
+      <input type="file" id="jsonFileInput" />
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Language</th>
+          <th>Locale</th>
+          <th>LessonUuid</th>
+          <th>ItemId</th>
+          <th>Contents</th>
+          <th class="status-select">Status</th>
+        </tr>
+      </thead>
+      <tbody id="itemsTable"></tbody>
+    </table>
+
+    <div id="exportSection">
+      <button id="exportBtn" class="btn btn-primary">Export JSON</button>
+      <small id="warningText" class="text-muted">
+        This session is not backed up. If you close or refresh the page, all
+        changes you made will be gone. It is advised to export and use the
+        exported file to continue.
+      </small>
+    </div>
+
+    <script>
+      const fileInput = document.getElementById("jsonFileInput");
+      const itemsTable = document.getElementById("itemsTable");
+
+      fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+
+        reader.onload = (event) => {
+          const content = event.target.result;
+          const data = JSON.parse(content);
+          populateItemsTable(data);
+          document.getElementById("importSection").style.display = "none";
+        };
+
+        reader.readAsText(file);
+      });
+
+      function populateItemsTable(data) {
+        for (let i = 0; i < data.length; i++) {
+          const item = data[i];
+          item.status = item.status || "Pending";
+
+          const row = document.createElement("tr");
+          row.setAttribute("data-status", item.status);
+          row.innerHTML = `
+            <td>${item.learnLanguageAlpha3}</td>
+            <td>${item.locale}</td>
+            <td>${item.lessonUuid}</td>
+            <td>${item.itemId}</td>
+            <td>${item.contents.join("<br>")}</td>
+            <td>
+              <select class="form-control status-select" value="${
+                item.status
+              }" onchange="updateItemStatus(this, ${i})">
+                <option ${
+                  item.status === "Pending" ? "selected" : ""
+                }>Pending</option>
+                <option ${
+                  item.status === "Approved" ? "selected" : ""
+                }>Approved</option>
+                <option ${
+                  item.status === "Rejected" ? "selected" : ""
+                }>Rejected</option>
+              </select>
+            </td>
+          `;
+
+          itemsTable.appendChild(row);
+        }
+        window.reviewItemsData = data;
+      }
+
+      window.updateItemStatus = (el, index) => {
+        const status = el.value;
+        window.reviewItemsData[index].status = status;
+        const row = el.parentElement.parentElement;
+        row.setAttribute("data-status", status);
+      };
+
+      document.getElementById("exportBtn").onclick = () => {
+        const jsonStr = JSON.stringify(window.reviewItemsData, null, 2);
+        const blob = new Blob([jsonStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "reviewed_items.json";
+        document.body.appendChild(link);
+
+        link.click();
+
+        document.body.removeChild(link);
+      };
+    </script>
+  </body>
+</html>
