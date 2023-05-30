@@ -35,6 +35,7 @@
       }
       .contents-wrapper {
         display: none;
+        padding-bottom: 70px;
       }
       .table-header {
         position: sticky;
@@ -61,9 +62,9 @@
         bottom: 0;
         background-color: white;
         padding: 10px;
-        display: flex;
+        display: none;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: space-between;
         width: 100%;
         height: 70px;
       }
@@ -72,6 +73,11 @@
         margin: 0 20px;
         font-size: 0.9em;
         color: #ff7535;
+      }
+      #counter {
+        flex-shrink: 0;
+        font-weight: bold;
+        font-size: larger;
       }
     </style>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -101,17 +107,19 @@
       </table>
     </div>
     <div class="bottom-sticky">
+      <p id="counter"></p>
       <p>
         This session is not backed up, If you close or refresh the page all
         changes you made will be gone. It is advised to export and use the
         exported file to continue.
       </p>
-      <button id="exportBtn" class="btn btn-primary">Export JSON</button>
+      <button id="exportBtn" class="btn btn-primary">Export</button>
     </div>
     <script>
       const fileInput = document.getElementById("jsonFileInput");
       const importBtn = document.getElementById("importBtn");
       const itemsTable = document.getElementById("itemsTable");
+      const counter = document.getElementById("counter");
 
       importBtn.addEventListener("click", () => {
         fileInput.click();
@@ -127,12 +135,14 @@
           populateItemsTable(data);
           $(".start-view").hide();
           $(".contents-wrapper").show();
+          $(".bottom-sticky").css("display", "flex");
         };
 
         reader.readAsText(file);
       });
 
       function populateItemsTable(data) {
+        let pendingCount = 0;
         for (let i = 0; i < data.length; i++) {
           const item = data[i];
 
@@ -161,8 +171,13 @@
           `;
           row.classList.add(item.status.toLowerCase());
           itemsTable.appendChild(row);
+
+          if (item.status == "Pending") {
+            pendingCount++;
+          }
         }
         window.reviewItemsData = data;
+        counter.innerText = `Items Left: ${pendingCount} / ${data.length}`;
       }
 
       window.updateItemStatus = (el, index) => {
@@ -171,6 +186,14 @@
         const row = itemsTable.children[index];
         row.className = "";
         row.classList.add(status.toLowerCase());
+
+        let pendingCount = 0;
+        for (let i = 0; i < window.reviewItemsData.length; i++) {
+          if (window.reviewItemsData[i].status == "Pending") {
+            pendingCount++;
+          }
+        }
+        counter.innerText = `Items Left: ${pendingCount} / ${window.reviewItemsData.length}`;
       };
 
       document.getElementById("exportBtn").onclick = () => {
