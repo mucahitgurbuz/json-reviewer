@@ -3,10 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <link
       rel="stylesheet"
       href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
     />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -79,9 +82,22 @@
         font-weight: bold;
         font-size: larger;
       }
+      .note-box {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        outline: none;
+        resize: none;
+      }
+      .button-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .notes-indicator {
+        color: #ff7535;
+      }
     </style>
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <title>Explainer Review Tool</title>
   </head>
   <body>
@@ -95,11 +111,12 @@
       <table class="table">
         <thead>
           <tr class="table-header">
-            <th>L2</th>
-            <th>L1</th>
-            <th>LessonUuid</th>
-            <th>ItemId</th>
-            <th>Contents</th>
+            <th>#</th>
+            <th>Trainer</th>
+            <th>L1/L2</th>
+            <th>LessonUuid/ItemId</th>
+            <th>Item</th>
+            <th>AI Content</th>
             <th style="min-width: 150px">Status</th>
           </tr>
         </thead>
@@ -115,11 +132,59 @@
       </p>
       <button id="exportBtn" class="btn btn-primary">Export</button>
     </div>
+
+    <!-- Modal -->
+    <div
+      class="modal fade"
+      id="notesModal"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="notesModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="notesModalLabel">Notes</h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <textarea id="noteBox" class="note-box"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveNotes()"
+              data-dismiss="modal"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       const fileInput = document.getElementById("jsonFileInput");
       const importBtn = document.getElementById("importBtn");
       const itemsTable = document.getElementById("itemsTable");
       const counter = document.getElementById("counter");
+      let currentNoteIndex = -1;
 
       importBtn.addEventListener("click", () => {
         fileInput.click();
@@ -150,12 +215,14 @@
 
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>${item.learnLanguageAlpha3}</td>
-            <td>${item.locale}</td>
-            <td>${item.lessonUuid}</td>
-            <td>${item.itemId}</td>
+            <td>${item.index}</td>
+            <td>${item.trainerType}/${item.interaction}</td>
+            <td>${item.locale} / ${item.learnLanguageAlpha3}</td>
+            <td>${item.lessonUuid} / ${item.itemId}</td>
+            <td>${item.learnLanguageItem}</td>
             <td>${item.contents.join("<br>")}</td>
             <td>
+              <div class="button-wrapper">
               <select class="form-control" onchange="updateItemStatus(this, ${i})">
                 <option ${
                   item.status == "Pending" ? "selected" : ""
@@ -167,6 +234,13 @@
                   item.status == "Rejected" ? "selected" : ""
                 }>Rejected</option>
               </select>
+              <button type="button" class="btn btn-secondary" onclick="openNotesModal(${i})">
+                ${item.notes ? "Edit" : "Add"} Notes
+              </button>
+              <p class="notes-indicator">${
+                item.notes ? "There is a reviewer note!" : ""
+              }</p>
+              </div>
             </td>
           `;
           row.classList.add(item.status.toLowerCase());
@@ -194,6 +268,26 @@
           }
         }
         counter.innerText = `Items Left: ${pendingCount} / ${window.reviewItemsData.length}`;
+      };
+
+      window.openNotesModal = (index) => {
+        $("#notesModal").modal("show");
+        const noteBox = document.getElementById("noteBox");
+        noteBox.value = window.reviewItemsData[index].notes || "";
+        currentNoteIndex = index;
+      };
+
+      window.saveNotes = () => {
+        const noteBox = document.getElementById("noteBox");
+        window.reviewItemsData[currentNoteIndex].notes = noteBox.value;
+        const row = itemsTable.children[currentNoteIndex];
+        const notesButton = row.querySelector("button");
+        const notesIndicator = row.querySelector("p");
+        notesButton.textContent = noteBox.value ? "Edit Notes" : "Add Notes";
+        notesIndicator.textContent = noteBox.value
+          ? "There is a reviewer note!"
+          : "";
+        currentNoteIndex = -1;
       };
 
       document.getElementById("exportBtn").onclick = () => {
