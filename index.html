@@ -215,12 +215,12 @@
 
           const row = document.createElement("tr");
           row.innerHTML = `
-            <td>${item.index}</td>
+<td>${item.index}</td>
             <td>${item.trainerType}/${item.interaction}</td>
             <td>${item.locale} / ${item.learnLanguageAlpha3}</td>
             <td>${item.lessonUuid} / ${item.itemId}</td>
             <td>${item.learnLanguageItem}</td>
-            <td>${item.contents.join("<br>")}</td>
+            <td>${item.contents.join("<hr>")}</td>
             <td>
               <div class="button-wrapper">
               <select class="form-control" onchange="updateItemStatus(this, ${i})">
