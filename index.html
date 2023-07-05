@@ -233,9 +233,9 @@
               ${
                 item.contents.meaning.length > 1
                   ? `<ul>
-                    ${item.contents.meaning
-                      .map((meaning) => `<li>${meaning}</li>`)
-                      .join("")}
+                    ${item.contents.meaning.map(
+                      (meaning) => `<li>${meaning}</li>`
+                    )}
                   </ul>`
                   : `<p>${item.contents.meaning[0]}</p>`
               }
@@ -246,26 +246,28 @@
                     ${item.contents.grammar
                       .map((grammar) => `<li>${grammar}</li>`)
                       .join("")}
-                  </ul>`
+                      </ul>`
                     : `<p>${item.contents.grammar[0]}</p>`
                 }
               <hr>
                 ${
                   item.contents.examples.single &&
-                  item.contents.examples.single.map(
-                    (singleItem) => `<p>${singleItem}</p>`
-                  )
+                  item.contents.examples.single
+                    .map((singleItem) => `<p>${singleItem}</p>`)
+                    .join("")
                 }
                 <ul>
                 ${
                   item.contents.examples.conversation &&
-                  item.contents.examples.conversation.map(
-                    (conversationItem) => `
+                  item.contents.examples.conversation
+                    .map(
+                      (conversationItem) => `
                       <li>Person A: ${conversationItem.personA.ll}(${conversationItem.personA.dl})<br/>Person B: ${conversationItem.personB.ll}(${conversationItem.personB.dl})</li>
                       `
-                  )
+                    )
+                    .join("")
                 }
-              </ul>
+                </ul>
               <hr>
                 ${
                   item.contents.goodToKnow.length > 1
