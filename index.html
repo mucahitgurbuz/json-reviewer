@@ -97,6 +97,15 @@
       .notes-indicator {
         color: #ff7535;
       }
+      .double-q {
+        quotes: "”" "”";
+        font-style: italic;
+      }
+      .single-q {
+        quotes: "’" "’";
+        color: darkgray;
+        font-weight: 400;
+      }
     </style>
     <title>Explainer Review Tool</title>
   </head>
@@ -242,14 +251,21 @@
                 }
               <hr>
                 ${
-                  item.contents.examples.length > 1
-                    ? `<ul>
-                    ${item.contents.examples
-                      .map((example) => `<li>${example}</li>`)
-                      .join("")}
-                  </ul>`
-                    : `<p>${item.contents.examples[0]}</p>`
+                  item.contents.examples.single &&
+                  item.contents.examples.single.map(
+                    (singleItem) => `<p>${singleItem}</p>`
+                  )
                 }
+                <ul>
+                ${
+                  item.contents.examples.conversation &&
+                  item.contents.examples.conversation.map(
+                    (conversationItem) => `
+                      <li>Person A: ${conversationItem.personA.ll}(${conversationItem.personA.dl})<br/>Person B: ${conversationItem.personB.ll}(${conversationItem.personB.dl})</li>
+                      `
+                  )
+                }
+              </ul>
               <hr>
                 ${
                   item.contents.goodToKnow.length > 1
