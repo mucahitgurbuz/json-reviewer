@@ -57,6 +57,9 @@
       .rejected {
         background-color: #ffcccc;
       }
+      .minor-revision {
+        background-color: #ffccfb;
+      }
       .pending {
         background-color: #ffffcc;
       }
@@ -291,6 +294,9 @@
                 <option ${
                   item.status == "Rejected" ? "selected" : ""
                 }>Rejected</option>
+                <option ${
+                  item.status == "Minor-Revision" ? "selected" : ""
+                }>Minor-Revision</option>
               </select>
               <button type="button" class="btn btn-secondary" onclick="openNotesModal(${i})">
                 ${item.notes ? "Edit" : "Add"} Notes
@@ -314,6 +320,7 @@
 
       window.updateItemStatus = (el, index) => {
         const status = el.value;
+        console.log("status", status);
         window.reviewItemsData[index].status = status;
         const row = itemsTable.children[index];
         row.className = "";
