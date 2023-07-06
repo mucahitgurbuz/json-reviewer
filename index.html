@@ -87,6 +87,7 @@
       }
       .note-box {
         width: 100%;
+        height: 250px;
         padding: 10px;
         border: 1px solid #ccc;
         outline: none;
@@ -108,6 +109,15 @@
         quotes: "’" "’";
         color: darkgray;
         font-weight: 400;
+      }
+      .edit-button-visible {
+        display: inline-block;
+      }
+      .edit-button-hidden {
+        display: none;
+      }
+      .modal-dialog {
+        max-width: 80%;
       }
     </style>
     <title>Explainer Review Tool</title>
@@ -191,6 +201,52 @@
       </div>
     </div>
 
+    <!-- Edit Modal -->
+    <div
+      class="modal fade"
+      id="editModal"
+      tabindex="-1"
+      role="dialog"
+      aria-labelledby="editModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editModalLabel">Edit Content</h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <textarea id="editBox" class="note-box"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="saveEdit()"
+              data-dismiss="modal"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
       const fileInput = document.getElementById("jsonFileInput");
       const importBtn = document.getElementById("importBtn");
@@ -233,58 +289,11 @@
             <td>${item.lessonUuid} / ${item.itemId}</td>
             <td>${item.learnLanguageItem}</td>
             <td>
-              ${
-                item.contents.meaning.length > 1
-                  ? `<ul>
-                    ${item.contents.meaning.map(
-                      (meaning) => `<li>${meaning}</li>`
-                    )}
-                  </ul>`
-                  : `<p>${item.contents.meaning[0]}</p>`
-              }
-              <hr>
-                ${
-                  item.contents.grammar.length > 1
-                    ? `<ul>
-                    ${item.contents.grammar
-                      .map((grammar) => `<li>${grammar}</li>`)
-                      .join("")}
-                      </ul>`
-                    : `<p>${item.contents.grammar[0]}</p>`
-                }
-              <hr>
-                ${
-                  item.contents.examples.single &&
-                  item.contents.examples.single
-                    .map((singleItem) => `<p>${singleItem}</p>`)
-                    .join("")
-                }
-                <ul>
-                ${
-                  item.contents.examples.conversation &&
-                  item.contents.examples.conversation
-                    .map(
-                      (conversationItem) => `
-                      <li>Person A: ${conversationItem.personA.ll}(${conversationItem.personA.dl})<br/>Person B: ${conversationItem.personB.ll}(${conversationItem.personB.dl})</li>
-                      `
-                    )
-                    .join("")
-                }
-                </ul>
-              <hr>
-                ${
-                  item.contents.goodToKnow.length > 1
-                    ? `<ul>
-                    ${item.contents.goodToKnow
-                      .map((goodToKnow) => `<li>${goodToKnow}</li>`)
-                      .join("")}
-                  </ul>`
-                    : `<p>${item.contents.goodToKnow[0]}</p>`
-                }
+              ${generateContentHtml(item.contents, i, item.status)}
             </td>
             <td>
               <div class="button-wrapper">
-              <select class="form-control" onchange="updateItemStatus(this, ${i})">
+              <select id="status${i}" class="form-control" onchange="updateItemStatus(this, ${i})">
                 <option ${
                   item.status == "Pending" ? "selected" : ""
                 }>Pending</option>
@@ -298,10 +307,10 @@
                   item.status == "Minor-Revision" ? "selected" : ""
                 }>Minor-Revision</option>
               </select>
-              <button type="button" class="btn btn-secondary" onclick="openNotesModal(${i})">
+              <button type="button" id="notes-button" class="btn btn-secondary" onclick="openNotesModal(${i})">
                 ${item.notes ? "Edit" : "Add"} Notes
               </button>
-              <p class="notes-indicator">${
+              <p id="notes-indicator" class="notes-indicator">${
                 item.notes ? "There is a reviewer note!" : ""
               }</p>
               </div>
@@ -320,11 +329,22 @@
 
       window.updateItemStatus = (el, index) => {
         const status = el.value;
-        console.log("status", status);
         window.reviewItemsData[index].status = status;
         const row = itemsTable.children[index];
         row.className = "";
         row.classList.add(status.toLowerCase());
+
+        // Show or hide edit buttons based on status
+        const editButtons = row.querySelectorAll(
+          'button[onclick^="openEditModal"]'
+        );
+        if (status === "Minor-Revision") {
+          editButtons.forEach(
+            (button) => (button.style.display = "inline-block")
+          );
+        } else {
+          editButtons.forEach((button) => (button.style.display = "none"));
+        }
 
         let pendingCount = 0;
         for (let i = 0; i < window.reviewItemsData.length; i++) {
@@ -346,8 +366,8 @@
         const noteBox = document.getElementById("noteBox");
         window.reviewItemsData[currentNoteIndex].notes = noteBox.value;
         const row = itemsTable.children[currentNoteIndex];
-        const notesButton = row.querySelector("button");
-        const notesIndicator = row.querySelector("p");
+        const notesButton = row.querySelector("#notes-button");
+        const notesIndicator = row.querySelector("#notes-indicator");
         notesButton.textContent = noteBox.value ? "Edit Notes" : "Add Notes";
         notesIndicator.textContent = noteBox.value
           ? "There is a reviewer note!"
@@ -368,6 +388,184 @@
         link.click();
 
         document.body.removeChild(link);
+      };
+
+      window.openEditModal = (index, contentKey, elementIndex) => {
+        $("#editModal").modal("show");
+        const editBox = document.getElementById("editBox");
+        if (
+          contentKey === "examples.single" ||
+          contentKey === "examples.conversation"
+        ) {
+          // split the contentKey from the dot
+          const contentKeySplit = contentKey.split(".");
+          const currentValue =
+            window.reviewItemsData[index].contents[contentKeySplit[0]][
+              contentKeySplit[1]
+            ][elementIndex];
+
+          if (contentKeySplit[1] === "conversation") {
+            editBox.value = JSON.stringify(currentValue, null, 2);
+          } else {
+            editBox.value = currentValue;
+          }
+        } else {
+          editBox.value =
+            window.reviewItemsData[index].contents[contentKey][elementIndex];
+        }
+        currentEditIndex = index;
+        currentEditKey = contentKey;
+        currentEditElementIndex = elementIndex;
+      };
+
+      window.saveEdit = () => {
+        const editBox = document.getElementById("editBox");
+        if (editBox.value === "") {
+          // show alert to confirm deletion
+          if (
+            confirm(
+              "Are you sure you want to delete this element? This cannot be undone using this app. In case of need reach Mücahit Gürbüz."
+            )
+          ) {
+            if (
+              currentEditKey === "examples.single" ||
+              currentEditKey === "examples.conversation"
+            ) {
+              // split the currentEditKey from the dot
+              const contentKeySplit = currentEditKey.split(".");
+              // delete the element
+              window.reviewItemsData[currentEditIndex].contents[
+                contentKeySplit[0]
+              ][contentKeySplit[1]].splice(currentEditElementIndex, 1);
+            } else {
+              // delete the element
+              window.reviewItemsData[currentEditIndex].contents[
+                currentEditKey
+              ].splice(currentEditElementIndex, 1);
+            }
+          } else {
+            return;
+          }
+        } else {
+          if (
+            currentEditKey === "examples.single" ||
+            currentEditKey === "examples.conversation"
+          ) {
+            // split the currentEditKey from the dot
+            const contentKeySplit = currentEditKey.split(".");
+            if (contentKeySplit[1] === "conversation") {
+              try {
+                window.reviewItemsData[currentEditIndex].contents[
+                  contentKeySplit[0]
+                ][contentKeySplit[1]][currentEditElementIndex] = JSON.parse(
+                  editBox.value
+                );
+              } catch (e) {
+                alert(
+                  "Invalid JSON!: It seems you have made an unwanted mistake while editing the object. Please check your input and try again. Or contact Mücahit Gürbüz for help."
+                );
+                return;
+              }
+            } else {
+              window.reviewItemsData[currentEditIndex].contents[
+                contentKeySplit[0]
+              ][contentKeySplit[1]][currentEditElementIndex] = editBox.value;
+            }
+          } else {
+            window.reviewItemsData[currentEditIndex].contents[currentEditKey][
+              currentEditElementIndex
+            ] = editBox.value;
+          }
+        }
+
+        const row = itemsTable.children[currentEditIndex];
+        const contentCell = row.children[5];
+        contentCell.innerHTML = generateContentHtml(
+          window.reviewItemsData[currentEditIndex].contents,
+          currentEditIndex,
+          "Minor-Revision"
+        );
+        currentEditIndex = -1;
+        currentEditKey = "";
+      };
+
+      window.generateContentHtml = (contents, index, status) => {
+        return `
+          <div>
+            <b><i>Meaning:</i></b><br>
+            ${contents.meaning
+              .map(
+                (meaning, i) =>
+                  `<p>${meaning} <button class="${
+                    status === "Minor-Revision"
+                      ? "edit-button-visible"
+                      : "edit-button-hidden"
+                  }" onclick="openEditModal(${index}, 'meaning', ${i})">Edit</button></p>`
+              )
+              .join("")}
+            <hr>
+            <b><i>Grammar:</i></b><br>
+            ${contents.grammar
+              .map(
+                (grammar, i) =>
+                  `<p>${grammar} <button class="${
+                    status === "Minor-Revision"
+                      ? "edit-button-visible"
+                      : "edit-button-hidden"
+                  }" onclick="openEditModal(${index}, 'grammar', ${i})">Edit</button></p>`
+              )
+              .join("")}
+            <hr>
+            <b><i>Examples - Single:</i></b><br>
+            ${contents.examples.single
+              .map(
+                (singleItem, i) =>
+                  `<p>${singleItem} <button class="${
+                    status === "Minor-Revision"
+                      ? "edit-button-visible"
+                      : "edit-button-hidden"
+                  }" onclick="openEditModal(${index}, 'examples.single', ${i})">Edit</button></p>`
+              )
+              .join("")}
+              <b><i>Examples - Conversation:</i></b><br>
+            <ul>
+              ${contents.examples.conversation
+                .map(
+                  (conversationItem, i) => `
+                <li>Person A: ${conversationItem.personA.ll}(${
+                    conversationItem.personA.dl
+                  })<br/>Person B: ${conversationItem.personB.ll}(${
+                    conversationItem.personB.dl
+                  }) <button class="${
+                    status === "Minor-Revision"
+                      ? "edit-button-visible"
+                      : "edit-button-hidden"
+                  }" onclick="openEditModal(${index}, 'examples.conversation', ${i})">Edit</button></li>
+              `
+                )
+                .join("")}
+            </ul>
+            <hr>
+            <b><i>Good to Know</i></b><br>
+            ${contents.goodToKnow
+              .map(
+                (goodToKnow, i) =>
+                  `<p>${goodToKnow} <button
+                        class="${
+                          status === "Minor-Revision"
+                            ? "edit-button-visible"
+                            : "edit-button-hidden"
+                        }"
+                        onclick="openEditModal(${index}, 'goodToKnow', ${i})"
+                      >
+                        Edit
+                      </button>
+
+                  </p>`
+              )
+              .join("")}
+          </div>
+        `;
       };
     </script>
   </body>
