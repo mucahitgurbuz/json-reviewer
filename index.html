@@ -48,7 +48,9 @@
       }
       .approved,
       .rejected,
-      .pending {
+      .pending,
+      .minor-revision,
+      .revised {
         transition: background-color 0.3s;
       }
       .approved {
@@ -62,6 +64,9 @@
       }
       .pending {
         background-color: #ffffcc;
+      }
+      .revised {
+        background-color: #cffaf1;
       }
       .bottom-sticky {
         position: fixed;
@@ -306,6 +311,9 @@
                 <option ${
                   item.status == "Minor-Revision" ? "selected" : ""
                 }>Minor-Revision</option>
+                <option ${
+                  item.status == "Revised" ? "selected" : ""
+                }>Revised</option>
               </select>
               <button type="button" id="notes-button" class="btn btn-secondary" onclick="openNotesModal(${i})">
                 ${item.notes ? "Edit" : "Add"} Notes
